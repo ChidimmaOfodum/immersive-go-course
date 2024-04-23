@@ -1,46 +1,52 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"log"
 	"flag"
-	"strings"
+	"fmt"
+	"log"
+	"os"
 )
-func Execute() {
-	help := flag.Bool("help", false, "describes how to use go-ls command")
-    flag.Parse()
 
-    if *help {
-        flag.PrintDefaults()
-        fmt.Println("Usage: go-ls [directories]")
-        return
-    }
-	//args := os.Args[1:]
+func Execute() {
+	help := flag.Bool("h", false, "describes how to use go-ls command")
+	flag.Parse()
+
+	if *help {
+		flag.PrintDefaults()
+		fmt.Println("Usage: go-ls [directories]")
+		return
+	}
 	args := flag.Args()
-	
+
 	if len(args) == 0 {
 		args = []string{"."}
 	}
-	
 
-	for _, y:= range args {
-		files, err := os.ReadDir(y)
+	for _, y := range args {
 
-		if err != nil {
-			errMessage := err.Error()
-			if (strings.Contains(errMessage, "fdopendir")) {
-				fmt.Println(y)
-				continue
-			} else {
-				log.Fatal(err)
-			}
-			
+		i, err1 := os.Stat(y)
+
+		if err1 != nil {
+			log.Panic(err1)
+		}
+		if i.IsDir() {
+			listFiles(y)
+		} else {
+			fmt.Printf("%s\n", i.Name())
 		}
 
-		for _, file := range files {
-			fmt.Printf("%s\n", file.Name())
-		}
 	}
 
+}
+
+func listFiles(name string) {
+	files, err := os.ReadDir(name)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	for _, v := range files {
+		fmt.Printf("%s\n", v.Name())
+	}
 }

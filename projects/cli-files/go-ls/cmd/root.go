@@ -24,17 +24,16 @@ func Execute() {
 
 	for _, y := range args {
 
-		i, err1 := os.Stat(y)
+		fileInfo, err := os.Stat(y)
 
-		if err1 != nil {
-			log.Panic(err1)
+		if err != nil {
+			log.Fatal(err)
 		}
-		if i.IsDir() {
+		if fileInfo.IsDir() {
 			listFiles(y)
 		} else {
-			fmt.Printf("%s\n", i.Name())
+			fmt.Printf("%s\n", fileInfo.Name())
 		}
-
 	}
 
 }
@@ -43,7 +42,7 @@ func listFiles(name string) {
 	files, err := os.ReadDir(name)
 
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	for _, v := range files {

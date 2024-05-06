@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,60 +10,74 @@ import (
 	"time"
 )
 
-func main() {
-	c := http.Client{Timeout: time.Duration(1) * time.Second}
+type RequestError struct {
+	SleepTime int
+	Retry     bool
+	ErrMsg       error
+}
 
-	resp, err := c.Get("http://localhost:8080")
 
-	if err != nil {
-		fmt.Fprint(os.Stderr, "Something went wrong. Cannot complete request at the moment\n")
-		return
-	}
-	defer resp.Body.Close()
+
+func parseRequest(resp http.Response) (reqBody string, reqError RequestError) {
 
 	switch resp.StatusCode {
 	case 429:
 		retryTime := resp.Header.Get("Retry-After")
-		formattedRetryTime, err := parseRetryValue(retryTime)
+		formattedRetryTime, err := ParseRetryValue(retryTime)
 
 		if err != nil {
-			// cannot determine how long to sleep for, retry once after 1 sec delay. Reason - The server response shows it is safe to retry. However we might not want keep at it for long - hence the choice
-
-			sleep(1)
-			resp, err = retry(1, c)
-
-			if err != nil {
-				// retry still unsuccessful and server does not respond
-				fmt.Fprint(os.Stderr, "Something went wrong. Cannot complete request at the moment\n")
-				resp.Body.Close()
-				return
-			}
-
-		} else if formattedRetryTime > 5 {
-			// sleep time is long
-			fmt.Fprint(os.Stderr, "Server busy. Cannot retrieve weather\n")
-			resp.Body.Close()
+			// cannot determine how long to sleep for, give up
+			reqError.ErrMsg = errors.New("cannot get weather at the moment try again later")
 			return
-		} else {
-			sleep(formattedRetryTime)
-			resp, err = retry(3, c) // chose 3 as max number of retries
-
-			if err != nil {
-				// retry still unsuccessful and server does not respond
-				fmt.Fprint(os.Stderr, "Something went wrong. Cannot complete request at the moment\n")
-				resp.Body.Close()
-				return
-			}
-
 		}
-	}
+		if formattedRetryTime > 5 {
+			// sleep time is long give up
+			reqError.ErrMsg = errors.New("server is busy at the moment try again later")
 
-	// for other responses - print to stdout
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Fprint(os.Stdout, string(body), "\n")
+		} else {
+			reqError.ErrMsg = errors.New("server is busy, retrying in few seconds")
+			reqError.SleepTime = formattedRetryTime
+			reqError.Retry = true
+		}
+	default:
+		body, _ := io.ReadAll(resp.Body)
+		reqBody = string(body)
+	}
+	return
+
 }
 
-func parseRetryValue(v string) (int, error) {
+func main() {
+	c := http.Client{Timeout: time.Duration(1) * time.Second}
+
+	for i := 0; i < 3; i++ {
+		resp, err := c.Get("http://localhost:8080")
+
+		if err != nil {
+			fmt.Fprint(os.Stderr, "cannot get weather at the moment. Please try again later\n")
+			os.Exit(2)
+		}
+		defer resp.Body.Close()
+		
+		body, reqErr := parseRequest(*resp)
+
+		if reqErr.ErrMsg != nil {
+			fmt.Fprintln(os.Stderr, reqErr.ErrMsg)
+
+			if reqErr.Retry {
+				sleep(reqErr.SleepTime)
+				continue
+			} else {
+				os.Exit(28)
+			}
+		} else {
+			fmt.Fprintln(os.Stdout, body)
+			break
+		}
+	}
+}
+
+func ParseRetryValue(v string) (int, error) {
 
 	value, err := strconv.Atoi(v)
 	if err != nil {
@@ -76,27 +91,6 @@ func parseRetryValue(v string) (int, error) {
 	}
 	return value, err
 
-}
-
-func retry(maxRetries int, c http.Client) (*http.Response, error) {
-	var resp *http.Response
-	var err error
-	for i := 1; i <= maxRetries; i++ {
-		// max of three retries after which we will give up if not successful
-		fmt.Fprint(os.Stderr, "Retrying ..........\n")
-
-		time.Sleep(time.Duration(1) * time.Second) // delay between each retries
-
-		resp, err = c.Get("http://localhost:8080")
-		if err != nil {
-			continue
-		}
-		if resp.StatusCode == 200 {
-			break
-		}
-
-	}
-	return resp, err
 }
 
 // sleep for a given time

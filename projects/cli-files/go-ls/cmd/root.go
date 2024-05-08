@@ -3,18 +3,21 @@ package cmd
 import (
 	"flag"
 	"fmt"
-	"log"
+	"io/fs"
 	"os"
 )
 
-func Execute() {
+func Execute()(error) {
+	var fileInfo fs.FileInfo
+	var err error
+
 	help := flag.Bool("h", false, "describes how to use go-ls command")
 	flag.Parse()
 
 	if *help {
 		flag.PrintDefaults()
 		fmt.Println("Usage: go-ls [directories]")
-		return
+		return nil
 	}
 	args := flag.Args()
 
@@ -24,28 +27,26 @@ func Execute() {
 
 	for _, y := range args {
 
-		fileInfo, err := os.Stat(y)
+		fileInfo, err = os.Stat(y)
 
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if fileInfo.IsDir() {
-			listFiles(y)
+			if err := listFiles(y); err != nil {
+				return err
+			}
 		} else {
 			fmt.Printf("%s\n", fileInfo.Name())
 		}
 	}
-
+	return nil
 }
 
-func listFiles(name string) {
+func listFiles(name string) (error) {
 	files, err := os.ReadDir(name)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for _, v := range files {
 		fmt.Printf("%s\n", v.Name())
 	}
+	return err
 }

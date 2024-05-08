@@ -1,18 +1,23 @@
 package cmd
 
 import (
-	"log"
 	"os"
+	"bufio"
+	"fmt"
 )
 
-func Execute() {
+func Execute() (error) {
 	args := os.Args[1:]
-	for _, v := range args {
-		data, err := os.ReadFile(v)
-
+	for _, fileName := range args {
+		file, err := os.Open(fileName)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		os.Stdout.Write(data)
+		scanner := bufio.NewScanner(file)
+
+		for scanner.Scan() {
+			fmt.Printf("%v\n", scanner.Text())	
+		}
 	}
+	return nil
 }

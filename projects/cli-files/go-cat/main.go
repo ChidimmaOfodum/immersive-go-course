@@ -1,7 +1,13 @@
 package main
 
-import "go-cat/cmd"
+import (
+	"go-cat/cmd"
+	"log"
+)
 
 func main() {
-	cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

@@ -1,97 +1,92 @@
-package interfaces_test
+package interfaces
 
 import (
-	"bytes"
 	"reflect"
 	"testing"
 )
 
 func TestBuffer(t *testing.T) {
-	t.Run("return same bytes as start byte", func(t *testing.T) {
-		input := "Hello World!"
-		b := bytes.NewBufferString(input)
-		got := b.Bytes()
-		expected := []byte(input)
+	input := []byte("Hello world!")
 
-		if !reflect.DeepEqual(got, expected) {
-			t.Errorf("got %v but expected %v\n", got, expected)
-		}
+	t.Run("return same bytes as start byte", func(t *testing.T) {
+		var b OurByteBuffer
+		b.Write(input)
+		got := b.Bytes()
+		want := input
+
+		assertCorrectMessage(t, got, want)
 	})
 
 	t.Run("can write extra bytes to buffer", func(t *testing.T) {
+		var b OurByteBuffer
 		firstInput := "Hello "
 		secondInput := "world"
-		b := bytes.NewBufferString(firstInput)
+		b.Write([]byte(firstInput))
 		b.Write([]byte(secondInput))
 		got := b.Bytes()
-		expected := []byte(firstInput + secondInput)
-
-		if !reflect.DeepEqual(got, expected) {
-			t.Errorf("got %v but expected %v\n", got, expected)
-		}
+		want := []byte(firstInput + secondInput)
+		assertCorrectMessage(t, got, want)
 
 	})
 
 	t.Run("can read from buffer", func(t *testing.T) {
-		input := "Hello"
+		var b OurByteBuffer
 		readbuf := make([]byte, len(input))
-		b := bytes.NewBufferString(input)
+		b.Write(input)
 		bytesRead, err := b.Read(readbuf)
-		
+
 		if err != nil {
 			t.Errorf("expect error to be nil, got %v\n", err)
 		}
-		contentRead := string(readbuf)
 		expectedNum := len(input)
-
-		
 
 		if bytesRead != expectedNum {
 			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
 		}
 
-		if input != contentRead {
-			t.Errorf("got %v but expected %v\n", contentRead, input)
-		}
+		assertCorrectMessage(t, readbuf, input)
 
-		
 	})
 
 	t.Run("can read from buffer in bits with slice smaller than buffer content", func(t *testing.T) {
+		var b OurByteBuffer
+
 		size := 2
 		readbuf := make([]byte, size)
-		input := "Hello world"
-		b := bytes.NewBufferString(input)
+
+		b.Write(input)
 
 		//first call
-		bytesRead, err := b.Read(readbuf)
-		contentRead := string(readbuf)
+		readCount, err := b.Read(readbuf)
+		expectedReadByte := []byte{'H', 'e'} //first two letters
 		if err != nil {
 			t.Errorf("expect error to be nil, got %v\n", err)
 		}
-		if bytesRead != size {
-			t.Errorf("got %v but expected %v\n", bytesRead, size)
+		if readCount != size {
+			t.Errorf("got %v but expected %v\n", readCount, size)
 		}
-
-		if contentRead != "He" {
-			t.Errorf("got %v but expected %v\n", contentRead, "He")
-		}
+		assertCorrectMessage(t, readbuf, expectedReadByte)
 
 		//second call
 
-		bytesRead, err = b.Read(readbuf)
-		contentRead = string(readbuf)
+		readCount, err = b.Read(readbuf)
+		expectedReadByte = []byte{'l', 'l'} //second 2 letters
+
 		if err != nil {
 			t.Errorf("expect error to be nil, got %v\n", err)
 		}
-		if bytesRead != size {
-			t.Errorf("got %v but expected %v\n", bytesRead, size)
+		if readCount != size {
+			t.Errorf("got %v but expected %v\n", readCount, size)
 		}
 
-		if contentRead != "ll" {
-			t.Errorf("got %v but expected %v\n", contentRead, "He")
-		}
-
+		assertCorrectMessage(t, readbuf, expectedReadByte)
 	})
 
+}
+
+func assertCorrectMessage(t testing.TB, got, want []byte) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v\n", string(got), string(want))
+	}
 }

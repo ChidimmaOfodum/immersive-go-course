@@ -1,2 +1,3 @@
-module main
+module interfaces
 
+go 1.18

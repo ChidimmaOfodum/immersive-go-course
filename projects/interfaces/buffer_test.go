@@ -17,7 +17,7 @@ func TestBuffer(t *testing.T) {
 		assertCorrectMessage(t, got, want)
 	})
 
-	t.Run("can write extra bytes to buffer", func(t *testing.T) {
+	t.Run("write extra bytes to buffer", func(t *testing.T) {
 		var b OurByteBuffer
 		firstInput := "Hello "
 		secondInput := "world"
@@ -29,7 +29,7 @@ func TestBuffer(t *testing.T) {
 
 	})
 
-	t.Run("can read from buffer", func(t *testing.T) {
+	t.Run("read from buffer", func(t *testing.T) {
 		var b OurByteBuffer
 		readbuf := make([]byte, len(input))
 		b.Write(input)
@@ -43,8 +43,39 @@ func TestBuffer(t *testing.T) {
 		if bytesRead != expectedNum {
 			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
 		}
-
 		assertCorrectMessage(t, readbuf, input)
+
+	})
+
+	t.Run("read: returns error when buffer is empty", func(t *testing.T) {
+		var b OurByteBuffer
+		readbuf := make([]byte, len(input))
+		bytesRead, err := b.Read(readbuf)
+
+		if err.Error() != "EOF" {
+			t.Errorf("expect error to be EOF, got %v\n", err.Error())
+		}
+		expectedNum := 0
+
+		if bytesRead != expectedNum {
+			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
+		}
+
+	})
+
+	t.Run("read: no error when buffer is empty and input length is 0", func(t *testing.T) {
+		var b OurByteBuffer
+		readbuf := make([]byte, 0)
+		bytesRead, err := b.Read(readbuf)
+
+		if err != nil {
+			t.Errorf("expect error to be nil, got %v\n", err)
+		}
+		expectedNum := 0
+
+		if bytesRead != expectedNum {
+			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
+		}
 
 	})
 
@@ -87,6 +118,6 @@ func TestBuffer(t *testing.T) {
 func assertCorrectMessage(t testing.TB, got, want []byte) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v want %v\n", string(got), string(want))
+		t.Errorf("got %v want %v\n", got, want)
 	}
 }

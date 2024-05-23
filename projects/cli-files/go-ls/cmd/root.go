@@ -8,9 +8,6 @@ import (
 )
 
 func Execute()(error) {
-	var fileInfo fs.FileInfo
-	var err error
-
 	//flags
 	help := flag.Bool("h", false, "describes how to use go-ls command")
 	comma:= flag.Bool("m", false, "prints with a delimiter")
@@ -24,7 +21,7 @@ func Execute()(error) {
 		return nil
 	}
 	if *comma {
-		delimiter = ","
+		delimiter = " ,"
 	}
 
 	args := flag.Args()
@@ -35,7 +32,7 @@ func Execute()(error) {
 
 	for _, filePath := range args {
 
-		fileInfo, err = os.Stat(filePath)
+		fileInfo, err := os.Stat(filePath)
 
 		if err != nil {
 			return err
@@ -58,7 +55,7 @@ func listFiles(fileNames []fs.DirEntry, delim string) {
 	for index, value := range fileNames {
 		fmt.Printf("%s", value.Name())
 		if index != len(fileNames) - 1 {
-			fmt.Printf("%s ", delim)
+			fmt.Printf("%s", delim)
 		}
 	}
 }

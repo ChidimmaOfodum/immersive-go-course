@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestListFiles(t *testing.T) {
+func TestPrintFileNames(t *testing.T) {
 	var b bytes.Buffer
 
 	tests := map[string]struct {

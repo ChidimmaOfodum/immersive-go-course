@@ -11,42 +11,10 @@ import (
 )
 
 type RequestError struct {
-	SleepTime int
-	Retry     bool
-	ErrMsg       error
+	SleepTime time.Duration
+	ShouldRetry     bool
+	Cause       error
 }
-
-
-
-func parseRequest(resp http.Response) (reqBody string, reqError RequestError) {
-
-	switch resp.StatusCode {
-	case 429:
-		retryTime := resp.Header.Get("Retry-After")
-		formattedRetryTime, err := ParseRetryValue(retryTime)
-
-		if err != nil {
-			// cannot determine how long to sleep for, give up
-			reqError.ErrMsg = errors.New("cannot get weather at the moment try again later")
-			return
-		}
-		if formattedRetryTime > 5 {
-			// sleep time is long give up
-			reqError.ErrMsg = errors.New("server is busy at the moment try again later")
-
-		} else {
-			reqError.ErrMsg = errors.New("server is busy, retrying in few seconds")
-			reqError.SleepTime = formattedRetryTime
-			reqError.Retry = true
-		}
-	default:
-		body, _ := io.ReadAll(resp.Body)
-		reqBody = string(body)
-	}
-	return
-
-}
-
 func main() {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 
@@ -61,10 +29,10 @@ func main() {
 		
 		body, reqErr := parseRequest(*resp)
 
-		if reqErr.ErrMsg != nil {
-			fmt.Fprintln(os.Stderr, reqErr.ErrMsg)
+		if reqErr.Cause != nil {
+			fmt.Fprintln(os.Stderr, reqErr.Cause)
 
-			if reqErr.Retry {
+			if reqErr.ShouldRetry {
 				sleep(reqErr.SleepTime)
 				continue
 			} else {
@@ -77,24 +45,52 @@ func main() {
 	}
 }
 
-func ParseRetryValue(v string) (int, error) {
+func parseRequest(resp http.Response) (reqBody string, reqError RequestError) {
 
-	value, err := strconv.Atoi(v)
-	if err != nil {
-		// check if retry time is in httpTime format
-		httpTime, httpTimeErr := time.Parse(time.RFC1123, v)
+	switch resp.StatusCode {
+	case 429:
+		retryTime := resp.Header.Get("Retry-After")
+		formattedRetryTime, err := ParseRetryValue(retryTime)
+		fmt.Print(err)
+		fmt.Print(formattedRetryTime)
 
-		if httpTimeErr == nil {
-			value = int(time.Until(httpTime).Seconds())
-			err = httpTimeErr
+		if err != nil {
+			// cannot determine how long to sleep for, give up
+			reqError.Cause = errors.New("cannot get weather at the moment try again later")
+			return
 		}
+		if formattedRetryTime > 5 {
+			// sleep time is long give up
+			reqError.Cause = errors.New("server is busy at the moment try again later")
+
+		} else {
+			reqError.Cause = errors.New("server is busy, retrying in few seconds")
+			reqError.SleepTime = time.Duration(formattedRetryTime)
+			reqError.ShouldRetry = true
+		}
+	default:
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			reqError.Cause = err
+		}
+		reqBody = string(body)
 	}
-	return value, err
+	return
 
 }
 
+func ParseRetryValue(v string) (int, error) {
+	if value, err := strconv.Atoi(v); err == nil {
+		return value, err
+	}
+	if value, err := time.Parse(time.RFC1123, v); err == nil {
+		return int(time.Until(value).Seconds()), err
+	}
+	return 0, fmt.Errorf("couldn't parse header as int or timestamp")
+}
+
 // sleep for a given time
-func sleep(t int) {
+func sleep(t time.Duration) {
 	if t > 1 {
 		fmt.Fprint(os.Stderr, "We are currently retrying your request. Things might take a bit longer than usual\n")
 	}

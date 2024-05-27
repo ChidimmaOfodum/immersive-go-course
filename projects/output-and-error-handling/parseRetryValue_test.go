@@ -26,7 +26,7 @@ func TestParseRetryValue(t *testing.T) {
 
 		gotValue, gotErr := ParseRetryValue("a while")
 		expectedValue := 0
-		expectedErr := "invalid syntax"
+		expectedErr := "couldn't parse header as int or timestamp"
 
 		if gotValue != expectedValue {
 			t.Errorf("expected %v but got %v", expectedValue, gotValue)

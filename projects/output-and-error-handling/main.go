@@ -27,7 +27,7 @@ func main() {
 		}
 		defer resp.Body.Close()
 		
-		body, reqErr := parseRequest(*resp)
+		body, reqErr := parseResponse(*resp)
 
 		if reqErr.Cause != nil {
 			fmt.Fprintln(os.Stderr, reqErr.Cause)
@@ -45,14 +45,12 @@ func main() {
 	}
 }
 
-func parseRequest(resp http.Response) (reqBody string, reqError RequestError) {
+func parseResponse(resp http.Response) (reqBody string, reqError RequestError) {
 
 	switch resp.StatusCode {
 	case 429:
 		retryTime := resp.Header.Get("Retry-After")
 		formattedRetryTime, err := ParseRetryValue(retryTime)
-		fmt.Print(err)
-		fmt.Print(formattedRetryTime)
 
 		if err != nil {
 			// cannot determine how long to sleep for, give up

@@ -3,14 +3,15 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 )
 
-func Execute()(error) {
+func Execute() error {
 	//flags
 	help := flag.Bool("h", false, "describes how to use go-ls command")
-	comma:= flag.Bool("m", false, "prints with a delimiter")
+	comma := flag.Bool("m", false, "prints with a delimiter")
 	flag.Parse()
 
 	delimiter := "\t"
@@ -21,7 +22,7 @@ func Execute()(error) {
 		return nil
 	}
 	if *comma {
-		delimiter = " ,"
+		delimiter = ", "
 	}
 
 	args := flag.Args()
@@ -43,7 +44,8 @@ func Execute()(error) {
 			if err != nil {
 				return err
 			}
-			listFiles(files, delimiter)
+			fileNames := fileToString(files)
+			printFileNames(fileNames, delimiter, os.Stdout)
 		} else {
 			fmt.Printf("%s\n", fileInfo.Name()) // print filename if not directory
 		}
@@ -51,11 +53,20 @@ func Execute()(error) {
 	return nil
 }
 
-func listFiles(fileNames []fs.DirEntry, delim string) {
+func printFileNames(fileNames []string, delim string, stream io.Writer) {
 	for index, value := range fileNames {
-		fmt.Printf("%s", value.Name())
-		if index != len(fileNames) - 1 {
-			fmt.Printf("%s", delim)
+		stream.Write([]byte(value))
+		if index != len(fileNames)-1 {
+			stream.Write([]byte(delim))
 		}
 	}
+}
+
+func fileToString(fileNames []fs.DirEntry) []string {
+	result := make([]string, len(fileNames))
+
+	for _, value := range fileNames {
+		result = append(result, value.Name())
+	}
+	return result
 }

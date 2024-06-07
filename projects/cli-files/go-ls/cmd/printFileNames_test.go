@@ -6,7 +6,7 @@ import (
 )
 
 func TestPrintFileNames(t *testing.T) {
-	var b bytes.Buffer
+	
 
 	tests := map[string]struct {
 		input []string
@@ -19,11 +19,9 @@ func TestPrintFileNames(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		var b bytes.Buffer
 		printFileNames(tc.input, tc.delim, &b)
-		readBuf := make([]byte, b.Len())
-		b.Read(readBuf)
-		got := string(readBuf)
-
+		got := b.String()
 		if got != tc.want {
 			t.Errorf("got %v but want %v\n", got, tc.want)
 		}

@@ -1,8 +1,10 @@
 package interfaces
 
 import (
-	"reflect"
+	"errors"
+	"io"
 	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuffer(t *testing.T) {
@@ -14,7 +16,7 @@ func TestBuffer(t *testing.T) {
 		got := b.Bytes()
 		want := input
 
-		assertCorrectMessage(t, got, want)
+		require.Equal(t, want, got)
 	})
 
 	t.Run("write extra bytes to buffer", func(t *testing.T) {
@@ -25,7 +27,7 @@ func TestBuffer(t *testing.T) {
 		b.Write([]byte(secondInput))
 		got := b.Bytes()
 		want := []byte(firstInput + secondInput)
-		assertCorrectMessage(t, got, want)
+		require.Equal(t, want, got)
 
 	})
 
@@ -33,33 +35,24 @@ func TestBuffer(t *testing.T) {
 		var b OurByteBuffer
 		readbuf := make([]byte, len(input))
 		b.Write(input)
-		bytesRead, err := b.Read(readbuf)
-
-		if err != nil {
-			t.Errorf("expect error to be nil, got %v\n", err)
-		}
-		expectedNum := len(input)
-
-		if bytesRead != expectedNum {
-			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
-		}
-		assertCorrectMessage(t, readbuf, input)
+		want := len(input)
+		
+		got, err := b.Read(readbuf)
+		require.Nil(t, err)
+		require.Equal(t, want, got)
 
 	})
 
-	t.Run("read: returns error when buffer is empty", func(t *testing.T) {
+	t.Run("read: returns EOF error when buffer is empty", func(t *testing.T) {
 		var b OurByteBuffer
 		readbuf := make([]byte, len(input))
 		bytesRead, err := b.Read(readbuf)
+		require.Equal(t, err, io.EOF)
 
-		if err.Error() != "EOF" {
-			t.Errorf("expect error to be EOF, got %v\n", err.Error())
+		if !errors.Is(err, io.EOF) {
+			t.Errorf("expect error to be EOF, got %v\n", err)
 		}
-		expectedNum := 0
-
-		if bytesRead != expectedNum {
-			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
-		}
+		require.Equal(t, 0, bytesRead)
 
 	})
 
@@ -67,16 +60,8 @@ func TestBuffer(t *testing.T) {
 		var b OurByteBuffer
 		readbuf := make([]byte, 0)
 		bytesRead, err := b.Read(readbuf)
-
-		if err != nil {
-			t.Errorf("expect error to be nil, got %v\n", err)
-		}
-		expectedNum := 0
-
-		if bytesRead != expectedNum {
-			t.Errorf("got %v but expected %v\n", bytesRead, expectedNum)
-		}
-
+		require.Nil(t, err)
+		require.Equal(t, 0, bytesRead)
 	})
 
 	t.Run("can read from buffer in bits with slice smaller than buffer content", func(t *testing.T) {
@@ -90,34 +75,26 @@ func TestBuffer(t *testing.T) {
 		//first call
 		readCount, err := b.Read(readbuf)
 		expectedReadByte := []byte{'H', 'e'} //first two letters
-		if err != nil {
-			t.Errorf("expect error to be nil, got %v\n", err)
-		}
-		if readCount != size {
-			t.Errorf("got %v but expected %v\n", readCount, size)
-		}
-		assertCorrectMessage(t, readbuf, expectedReadByte)
-
+		require.Nil(t, err)
+		require.Equal(t, size, readCount)
+		require.Equal(t, expectedReadByte, readbuf)
+		
 		//second call
 
 		readCount, err = b.Read(readbuf)
 		expectedReadByte = []byte{'l', 'l'} //second 2 letters
-
-		if err != nil {
-			t.Errorf("expect error to be nil, got %v\n", err)
-		}
-		if readCount != size {
-			t.Errorf("got %v but expected %v\n", readCount, size)
-		}
-
-		assertCorrectMessage(t, readbuf, expectedReadByte)
+		require.Nil(t, err)
+		require.Equal(t, size, readCount)
+		require.Equal(t, expectedReadByte, readbuf)
 	})
 
-}
-
-func assertCorrectMessage(t testing.TB, got, want []byte) {
-	t.Helper()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v want %v\n", got, want)
-	}
+	t.Run("can read from buffer with slice bigger than buffer content", func(t *testing.T) {
+		var b OurByteBuffer
+		readbuf := make([]byte, len(input) * 2)
+		b.Write(input)
+		bytesRead, err := b.Read(readbuf)
+		require.Nil(t, err)
+		require.Equal(t, len(input), bytesRead)
+		require.Equal(t, input, readbuf[:len(input)])
+	})
 }

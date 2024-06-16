@@ -47,8 +47,8 @@ func TestFilterNumbers(t *testing.T) {
 	}{
 		"without numbers": {input: []byte("I am a string without numbers"), want: []byte("I am a string without numbers")},
 		"with numbers":    {input: []byte("start=1, end=10"), want: []byte("start=, end=")},
-		"empty": {input: []byte(""), want: nil},
-		"only numbers" : {input: []byte("1233455566"), want: nil},
+		"empty": {input: []byte{}, want: []byte{}},
+		"only numbers" : {input: []byte("1233455566"), want: []byte{}},
 	}
 
 	for name, tc := range tests {

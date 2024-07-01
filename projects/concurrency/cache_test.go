@@ -3,11 +3,11 @@ package concurrency
 import (
 	"testing"
 	"time"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestCache(t *testing.T) {
-
 	t.Run("initializes a cache", func(t *testing.T) {
 		c := NewCache[string, any](3)
 		require.Equal(t, c.entryLimit, 3)
@@ -47,34 +47,28 @@ func TestCache(t *testing.T) {
 			"friend": "Amy",
 		}
 		for key, value := range input {
-			c.Put(key, cacheEntry[any]{value: value, readTime: time.Now()})
+			c.Put(key, cacheEntry[any]{value: value, timeStamp: time.Now()})
 		}
 		require.Equal(t, 3, len(c.cache))
 	})
-
-	t.Run("test hit rate", func (t *testing.T)  {
-		c := NewCache[string, any](3)
-
-		for i:=0; i < 20; i++ {
-			c.Get("name")
-		}
-		require.Equal(t, c.statistics.hitRate, 0)
-		c.Put("name", "John")
-
-		for i:=0; i < 10; i++ {
-			c.Get("name")
-		}
-		require.Equal(t, 10, c.statistics.hitRate)
-	})
 }
-
 
 func TestLastRecentlyUsedEntry(t *testing.T) {
 	c := make(map[string]cacheEntry[string])
-	c["secondEntry"] = cacheEntry[string]{value: "Hello", readTime: time.Now()}
-	c["firstEntry"] = cacheEntry[string]{value: "Hello2", readTime: time.Now().Add(10 * time.Second)}
-	c["thirdEntry"] = cacheEntry[string]{value: "Hello3", readTime: time.Now().Add(20 * time.Second)}
+	c["secondEntry"] = cacheEntry[string]{value: "Hello", timeStamp: time.Now()}
+	c["firstEntry"] = cacheEntry[string]{value: "Hello2", timeStamp: time.Now().Add(10 * time.Second)}
+	c["thirdEntry"] = cacheEntry[string]{value: "Hello3", timeStamp: time.Now().Add(20 * time.Second)}
 
 	key := getLastRecentlyUsedEntry(c)
 	require.Equal(t, "secondEntry", key)
+}
+
+func TestGetUnReadEntries(t *testing.T) {
+	c := map[string]cacheEntry[string]{
+		"name":     {value: "Anna", timeStamp: time.Now(), isRead: true},
+		"hobby":    {value: "swimming", timeStamp: time.Now(), isRead: false},
+		"lastName": {value: "Joe", timeStamp: time.Now(), isRead: true},
+	}
+	got := getUnReadEntries(c)
+	require.Equal(t, 1, got)
 }

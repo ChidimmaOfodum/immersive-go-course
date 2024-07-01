@@ -8,19 +8,24 @@ type Statistics struct {
 	hitRate        int
 	unReadEndtries int
 	averageHit     float32
-	readsAndWrite  int
+	totalReadsAndWrites  int
 }
 
 type cacheEntry[V any]struct {
 	value V
-	readTime time.Time
+	timeStamp time.Time
+	isRead bool
 }
 
 type Cache[K comparable, V any] struct {
 	entryLimit int
 	cache      map[K]cacheEntry[V]
+	unReadEntries int
+	averageHit float32
+	totalReads int
+	totalWrites int
+	hitRate int
 	totalHits int
-	statistics Statistics
 }
 
 func NewCache[K comparable, V any](entryLimit int) Cache[K, V] {
@@ -28,35 +33,44 @@ func NewCache[K comparable, V any](entryLimit int) Cache[K, V] {
 }
 
 func (c *Cache[K, V]) Put(key K, value V) bool {
+	c.totalWrites += 1
 	_, ok := c.cache[key]
 	// replacing value of an existing key
 	if ok {
-		c.cache[key] = cacheEntry[V]{value: value, readTime: time.Now()}
+		c.cache[key] = cacheEntry[V]{value: value, timeStamp: time.Now(), isRead: false}
 		return ok
 	}
 
 	//inserting new item
 	if len(c.cache) == c.entryLimit {
 		lastUsed := getLastRecentlyUsedEntry(c.cache)
+		if c.cache[lastUsed].isRead {
+			c.unReadEntries += 1
+		}
 		delete(c.cache, lastUsed)
 	}
-	c.cache[key] = cacheEntry[V]{value: value, readTime: time.Now()}
+	c.cache[key] = cacheEntry[V]{value: value, timeStamp: time.Now()}
 	return ok
 }
 
 func (c *Cache[K, V]) Get(key K) (*V, bool) {
-	c.totalHits += 1
+	c.totalReads += 1
 	entry, ok := c.cache[key]
 	if !ok {
 		return nil, ok
 	}
-	entry.readTime = time.Now()
-	c.statistics.hitRate += 1
+	entry.timeStamp = time.Now()
+	c.hitRate += 1
 	return &entry.value, ok
 }
 
 func (c *Cache[K, V]) GetStatistics() Statistics {
-	return c.statistics
+	return Statistics{
+		hitRate: c.hitRate,
+		averageHit: c.averageHit,
+		totalReadsAndWrites: c.totalReads + c.totalWrites,
+		unReadEndtries: c.unReadEntries + getUnReadEntries(c.cache),
+	}
 }
 
 func getLastRecentlyUsedEntry[K comparable, V any](entries map[K]cacheEntry[V]) K {
@@ -66,17 +80,28 @@ func getLastRecentlyUsedEntry[K comparable, V any](entries map[K]cacheEntry[V]) 
 
 	for key, value := range entries {
 		if count == 1 {
-			readTime = value.readTime
+			readTime = value.timeStamp
 			lastUsedKey = key
 			count++
 			continue
 		} else {
-			if value.readTime.Before(readTime) {
-				readTime = value.readTime
+			if value.timeStamp.Before(readTime) {
+				readTime = value.timeStamp
 				lastUsedKey = key
 			}
 		}
 	}
 	return lastUsedKey
 
+}
+
+func getUnReadEntries[K comparable, V any](entries map[K]cacheEntry[V]) int {
+	count := 0
+
+	for _, value := range entries {
+		if !value.isRead {
+			count++
+		}
+	}
+	return count
 }

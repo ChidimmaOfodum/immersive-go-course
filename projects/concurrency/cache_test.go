@@ -64,11 +64,38 @@ func TestLastRecentlyUsedEntry(t *testing.T) {
 }
 
 func TestGetUnReadEntries(t *testing.T) {
-	c := map[string]cacheEntry[string]{
-		"name":     {value: "Anna", timeStamp: time.Now(), isRead: true},
-		"hobby":    {value: "swimming", timeStamp: time.Now(), isRead: false},
-		"lastName": {value: "Joe", timeStamp: time.Now(), isRead: true},
+	tests := map[string]struct {
+		input    map[string]cacheEntry[string]
+		expected int
+	}{
+		"all entries read": {
+			input: map[string]cacheEntry[string]{
+				"name":     {value: "Anna", timeStamp: time.Now(), numberOfTimesRead: 2},
+				"hobby":    {value: "swimming", timeStamp: time.Now(), numberOfTimesRead: 1},
+				"lastName": {value: "Joe", timeStamp: time.Now(), numberOfTimesRead: 3},
+			},
+			expected: 0},
+		"no entries read": {
+			input: map[string]cacheEntry[string]{
+				"name":     {value: "Anna", timeStamp: time.Now(), numberOfTimesRead: 0},
+				"hobby":    {value: "swimming", timeStamp: time.Now(), numberOfTimesRead: 0},
+				"lastName": {value: "Joe", timeStamp: time.Now(), numberOfTimesRead: 0},
+			},
+			expected: 3},
+
+		"some entries read": {
+			input: map[string]cacheEntry[string]{
+				"name":     {value: "Anna", timeStamp: time.Now(), numberOfTimesRead: 2},
+				"hobby":    {value: "swimming", timeStamp: time.Now(), numberOfTimesRead: 0},
+				"lastName": {value: "Joe", timeStamp: time.Now(), numberOfTimesRead: 1},
+			},
+			expected: 1},
 	}
-	got := getUnReadEntries(c)
-	require.Equal(t, 1, got)
+
+	for key, value := range tests {
+		t.Run(key, func(t *testing.T) {
+			got := getUnReadEntries[string, string](value.input)
+			require.Equal(t, value.expected, got)
+		})
+	}
 }

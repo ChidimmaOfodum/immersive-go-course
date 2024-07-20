@@ -1,31 +1,30 @@
 package concurrency
 
 import (
+	"math"
 	"time"
 )
 
 type Statistics struct {
-	hitRate        int
-	unReadEndtries int
-	averageHit     float32
-	totalReadsAndWrites  int
+	hitRate             int
+	unReadEntries      int
+	averageHit          float64
+	totalReadsAndWrites int
 }
 
-type cacheEntry[V any]struct {
-	value V
+type cacheEntry[V any] struct {
+	value     V
 	timeStamp time.Time
-	isRead bool
+	numberOfTimesRead int
 }
 
 type Cache[K comparable, V any] struct {
-	entryLimit int
-	cache      map[K]cacheEntry[V]
-	unReadEntries int
-	averageHit float32
-	totalReads int
-	totalWrites int
-	hitRate int
-	totalHits int
+	entryLimit      int
+	cache           map[K]cacheEntry[V]
+	unReadEntries   int
+	totalReads      int
+	totalWrites     int
+	successfulReads int
 }
 
 func NewCache[K comparable, V any](entryLimit int) Cache[K, V] {
@@ -34,23 +33,23 @@ func NewCache[K comparable, V any](entryLimit int) Cache[K, V] {
 
 func (c *Cache[K, V]) Put(key K, value V) bool {
 	c.totalWrites += 1
-	_, ok := c.cache[key]
-	// replacing value of an existing key
-	if ok {
-		c.cache[key] = cacheEntry[V]{value: value, timeStamp: time.Now(), isRead: false}
+	entry := cacheEntry[V]{value: value, timeStamp: time.Now()}
+
+	if _, ok := c.cache[key]; ok {
+		c.cache[key] = entry
 		return ok
 	}
 
 	//inserting new item
 	if len(c.cache) == c.entryLimit {
 		lastUsed := getLastRecentlyUsedEntry(c.cache)
-		if c.cache[lastUsed].isRead {
+		if (c.cache[lastUsed].numberOfTimesRead == 0) {
 			c.unReadEntries += 1
 		}
 		delete(c.cache, lastUsed)
 	}
-	c.cache[key] = cacheEntry[V]{value: value, timeStamp: time.Now()}
-	return ok
+	c.cache[key] = entry
+	return false
 }
 
 func (c *Cache[K, V]) Get(key K) (*V, bool) {
@@ -60,16 +59,29 @@ func (c *Cache[K, V]) Get(key K) (*V, bool) {
 		return nil, ok
 	}
 	entry.timeStamp = time.Now()
-	c.hitRate += 1
+	entry.numberOfTimesRead++
+	c.cache[key] = entry // ToDO 
+	c.successfulReads += 1
 	return &entry.value, ok
 }
 
 func (c *Cache[K, V]) GetStatistics() Statistics {
+	var hitRate int = 0
+	if c.totalReads != 0 {
+		hitRate = int(float32(c.successfulReads)/float32(c.totalReads) * 100)
+	}
+	//calculate average reads
+	totalReadsInCache := 0
+	for _, value := range c.cache {
+		totalReadsInCache += value.numberOfTimesRead
+	}
+	averageReads := float64(totalReadsInCache) / float64(len(c.cache))
+
 	return Statistics{
-		hitRate: c.hitRate,
-		averageHit: c.averageHit,
+		hitRate:             int(hitRate),
+		averageHit:          roundFloat(averageReads, 2),
 		totalReadsAndWrites: c.totalReads + c.totalWrites,
-		unReadEndtries: c.unReadEntries + getUnReadEntries(c.cache),
+		unReadEntries:      c.unReadEntries + getUnReadEntries(c.cache),
 	}
 }
 
@@ -99,9 +111,14 @@ func getUnReadEntries[K comparable, V any](entries map[K]cacheEntry[V]) int {
 	count := 0
 
 	for _, value := range entries {
-		if !value.isRead {
+		if value.numberOfTimesRead == 0 {
 			count++
 		}
 	}
 	return count
+}
+
+func roundFloat(num float64, precision int) float64 {
+	multiplier := math.Pow(10.0, float64(precision))
+	return math.Round(num * multiplier) / multiplier
 }

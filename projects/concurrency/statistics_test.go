@@ -13,7 +13,7 @@ func TestHitRate(t *testing.T) {
 		c.Put("name", "John")
 		c.Put("age", 30)
 		got := c.GetStatistics().hitRate
-		require.Equal(t, 0, got)
+		require.Equal(t, float64(0), got)
 
 	})
 
@@ -35,7 +35,7 @@ func TestHitRate(t *testing.T) {
 
 		got := c.GetStatistics().hitRate
 
-		require.Equal(t, 100, got)
+		require.Equal(t, 100.00, got)
 	})
 
 	t.Run("some keys not in cache", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestHitRate(t *testing.T) {
 
 		got := c.GetStatistics().hitRate
 
-		require.Equal(t, 33, got)
+		require.Equal(t, 33.33, got)
 	})
 
 }

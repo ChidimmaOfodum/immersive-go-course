@@ -6,7 +6,7 @@ import (
 )
 
 type Statistics struct {
-	hitRate             int
+	hitRate             float64
 	unReadEntries      int
 	averageHit          float64
 	totalReadsAndWrites int
@@ -66,9 +66,10 @@ func (c *Cache[K, V]) Get(key K) (*V, bool) {
 }
 
 func (c *Cache[K, V]) GetStatistics() Statistics {
-	var hitRate int = 0
+	var hitRate float64 
 	if c.totalReads != 0 {
-		hitRate = int(float32(c.successfulReads)/float32(c.totalReads) * 100)
+		result := float64(c.successfulReads)/float64(c.totalReads) * 100
+		hitRate = roundFloat(result, 2)
 	}
 	//calculate average reads
 	totalReadsInCache := 0
@@ -78,7 +79,7 @@ func (c *Cache[K, V]) GetStatistics() Statistics {
 	averageReads := float64(totalReadsInCache) / float64(len(c.cache))
 
 	return Statistics{
-		hitRate:             int(hitRate),
+		hitRate: hitRate,
 		averageHit:          roundFloat(averageReads, 2),
 		totalReadsAndWrites: c.totalReads + c.totalWrites,
 		unReadEntries:      c.unReadEntries + getUnReadEntries(c.cache),

@@ -88,24 +88,15 @@ func (c *Cache[K, V]) GetStatistics() Statistics {
 
 func getLastRecentlyUsedEntry[K comparable, V any](entries map[K]cacheEntry[V]) K {
 	var lastUsedKey K
-	var readTime time.Time
-	count := 1
+	var readTime = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	for key, value := range entries {
-		if count == 1 {
-			readTime = value.timeStamp
-			lastUsedKey = key
-			count++
-			continue
-		} else {
 			if value.timeStamp.Before(readTime) {
 				readTime = value.timeStamp
 				lastUsedKey = key
 			}
 		}
-	}
 	return lastUsedKey
-
 }
 
 func getUnReadEntries[K comparable, V any](entries map[K]cacheEntry[V]) int {

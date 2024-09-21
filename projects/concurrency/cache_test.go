@@ -45,22 +45,25 @@ func TestCache(t *testing.T) {
 			"age":    30,
 			"hobby":  "swimming",
 			"friend": "Amy",
+			"occupation": "Pilot",
 		}
 		for key, value := range input {
 			c.Put(key, cacheEntry[any]{value: value, timeStamp: time.Now()})
 		}
 		require.Equal(t, 3, len(c.cache))
+		c.Get("name")
 	})
 }
 
 func TestLastRecentlyUsedEntry(t *testing.T) {
 	c := make(map[string]cacheEntry[string])
-	c["secondEntry"] = cacheEntry[string]{value: "Hello", timeStamp: time.Now()}
-	c["firstEntry"] = cacheEntry[string]{value: "Hello2", timeStamp: time.Now().Add(10 * time.Second)}
-	c["thirdEntry"] = cacheEntry[string]{value: "Hello3", timeStamp: time.Now().Add(20 * time.Second)}
+	c["1"] = cacheEntry[string]{value: "entry1", timeStamp: time.Now()}
+	c["2"] = cacheEntry[string]{value: "entry2", timeStamp: time.Now().Add(10 * time.Second)}
+	c["3"] = cacheEntry[string]{value: "entry3", timeStamp: time.Now().Add(20 * time.Second)}
+	c["4"] = cacheEntry[string]{value: "entry4", timeStamp: time.Now().Add(-30 * time.Second)}
 
 	key := getLastRecentlyUsedEntry(c)
-	require.Equal(t, "secondEntry", key)
+	require.Equal(t, "4", key)
 }
 
 func TestGetUnReadEntries(t *testing.T) {

@@ -160,7 +160,7 @@ func TestAverageReads(t *testing.T) {
 			c.Put(key, value)
 			c.Get(key)
 		}
-		require.Equal(t, 1.0, c.GetStatistics().averageHit)
+		require.Equal(t, 1.0, c.GetStatistics().averageReads)
 	})
 
 	t.Run("things currently in the cache", func(t *testing.T) {
@@ -175,7 +175,7 @@ func TestAverageReads(t *testing.T) {
 			c.Get(key)
 		}
 		c.Put("not-in-cache", "not-in-cache")
-		require.Equal(t, 0.67, c.GetStatistics().averageHit)
+		require.Equal(t, 0.67, c.GetStatistics().averageReads)
 	})
 
 }

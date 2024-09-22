@@ -97,7 +97,7 @@ func TestGetUnReadEntries(t *testing.T) {
 
 	for key, value := range tests {
 		t.Run(key, func(t *testing.T) {
-			got := getUnReadEntries[string, string](value.input)
+			got := unReadEntriesInMap[string, string](value.input)
 			require.Equal(t, value.expected, got)
 		})
 	}

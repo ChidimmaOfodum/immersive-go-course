@@ -70,7 +70,7 @@ func TestConcurrency(t *testing.T) {
 	})
 
 	t.Run("concurrent reads and writes", func(t *testing.T) {
-		c := NewCache[string, any](3)
+		c := NewCache[string, string](3)
 		c.Put("occupation", "Pilot")
 
 		var wg sync.WaitGroup
@@ -87,12 +87,12 @@ func TestConcurrency(t *testing.T) {
 			go func() {
 				value, ok := c.Get("occupation")
 				if !ok {
-					t.Errorf("expected %v but got %v", true, ok)
+					t.Errorf("expected %v but got %v", true, ok) //debug why requird doesn't work. Find tools oto help you.
 				}
 				if value == nil {
 					t.Errorf("expect value to not be nil")
 				} else {
-					stringifiedValue := (*value).(string)
+					stringifiedValue := *value
 					got := strings.Split(stringifiedValue, "")[0:5]
 					if strings.Join(got, "") != "Pilot" {
 						t.Errorf("expected %s but got %s", "Pilot", got)

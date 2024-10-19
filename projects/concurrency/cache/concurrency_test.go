@@ -2,7 +2,6 @@ package cache
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"github.com/stretchr/testify/require"
@@ -93,8 +92,8 @@ func TestConcurrency(t *testing.T) {
 					t.Errorf("expect value to not be nil")
 				} else {
 					stringifiedValue := *value
-					got := strings.Split(stringifiedValue, "")[0:5]
-					if strings.Join(got, "") != "Pilot" {
+					got := stringifiedValue[0:5]
+					if got != "Pilot" {
 						t.Errorf("expected %s but got %s", "Pilot", got)
 					}
 				}

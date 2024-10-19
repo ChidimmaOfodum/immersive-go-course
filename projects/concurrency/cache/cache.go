@@ -6,13 +6,6 @@ import (
 	"sync"
 	"time"
 )
-
-// type Node[K comparable] struct {
-// 	key  K
-// 	prev *Node[K]
-// 	next *Node[K]
-// }
-
 type Statistics struct {
 	hitRate             float64
 	unReadEntries       int
@@ -38,11 +31,6 @@ type Cache[K comparable, V any] struct {
 	successfulReads      int
 	list                 *list.LinkedList[K]
 }
-
-// type LinkedList[K comparable] struct {
-// 	head *Node[K]
-// 	tail *Node[K]
-// }
 
 func NewCache[K comparable, V any](entryLimit int) Cache[K, V] {
 	newList := list.LinkedList[K]{}
@@ -147,63 +135,3 @@ func roundFloat(num float64, precision int) float64 {
 	multiplier := math.Pow(10.0, float64(precision))
 	return math.Round(num*multiplier) / multiplier
 }
-
-// func (list *LinkedList[K]) moveToHead(node *Node[K]) {
-// 	if node == list.head {
-// 		return
-// 	}
-// 	if list.head == nil {
-// 		list.insertAtHead(node)
-// 		return
-// 	}
-
-// 	if node == list.tail {
-// 		node.prev.next = nil
-// 		list.tail = node.prev
-// 	} else {
-// 		node.prev.next = node.next
-// 		node.next.prev = node.prev
-// 	}
-
-// 	node.prev = nil
-// 	node.next = list.head
-// 	list.head.prev = node
-// 	list.head = node
-// }
-
-// func (list *LinkedList[K]) insertAtHead(node *Node[K]) {
-// 	if list.head == nil {
-// 		list.head = node
-// 		list.tail = node
-// 		return
-// 	}
-
-// 	list.head.prev = node
-// 	node.next = list.head
-// 	list.head = node
-// }
-
-// func (list *LinkedList[K]) deleteLastNode() {
-// 	if list.tail == nil {
-// 		return
-// 	}
-// 	if list.head == list.tail {
-// 		list.head = nil
-// 		list.tail = nil
-// 		return
-// 	}
-// 	tailNode := list.tail
-// 	tailNode.prev.next = nil
-// 	list.tail = tailNode.prev
-// 	tailNode.prev = nil
-// }
-
-// func (list *LinkedList[K]) printList() string {
-// 	var result string
-// 	current := list.head
-// 	for current != nil {
-// 		result += fmt.Sprintf("%v\n", current.key)
-// 		current = current.next
-// 	}
-// 	return result
-// }

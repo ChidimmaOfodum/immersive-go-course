@@ -35,13 +35,11 @@ func TestMoveNodeToHead(t *testing.T) {
 
 	t.Run("target node at tail", func(t *testing.T) {
 		list := &LinkedList[string]{}
-		node1 := &Node[string]{Key: "node1"}
-		node2 := &Node[string]{Key: "node2", prev: node1}
-		node3 := &Node[string]{Key: "node3", prev: node2}
-		list.Tail = node3
-		list.Head = node1
-		node1.next = node2
-		node2.next = node3
+		node3 := &Node[string]{Key: "node3"}
+
+		list.InsertAtHead(node3)
+		list.InsertAtHead(&Node[string]{Key: "node2"})
+		list.InsertAtHead(&Node[string]{Key: "node1"})
 
 		got := list.printList()
 		require.Equal(t, "node1\nnode2\nnode3\n", got)
@@ -55,13 +53,11 @@ func TestMoveNodeToHead(t *testing.T) {
 
 	t.Run("target node at middle", func(t *testing.T) {
 		list := &LinkedList[string]{}
-		node1 := &Node[string]{Key: "node1"}
-		node2 := &Node[string]{Key: "node2", prev: node1}
-		node3 := &Node[string]{Key: "node3", prev: node2}
-		list.Tail = node3
-		list.Head = node1
-		node1.next = node2
-		node2.next = node3
+		node2 := &Node[string]{Key: "node2"}
+
+		list.InsertAtHead(&Node[string]{Key: "node3"})
+		list.InsertAtHead(node2)
+		list.InsertAtHead(&Node[string]{Key: "node1"})
 
 		got := list.printList()
 		require.Equal(t, "node1\nnode2\nnode3\n", got)
@@ -76,12 +72,10 @@ func TestMoveNodeToHead(t *testing.T) {
 	t.Run("target node at beginning", func(t *testing.T) {
 		list := &LinkedList[string]{}
 		node1 := &Node[string]{Key: "node1"}
-		node2 := &Node[string]{Key: "node2", prev: node1}
-		node3 := &Node[string]{Key: "node3", prev: node2}
-		list.Tail = node3
-		list.Head = node1
-		node1.next = node2
-		node2.next = node3
+
+		list.InsertAtHead(&Node[string]{Key: "node3"})
+		list.InsertAtHead(&Node[string]{Key: "node2"})
+		list.InsertAtHead(node1)
 
 		got := list.printList()
 		require.Equal(t, "node1\nnode2\nnode3\n", got)
@@ -115,13 +109,9 @@ func TestDeleteLastNode(t *testing.T) {
 
 	t.Run("multiple items in list", func(t *testing.T) {
 		list := &LinkedList[string]{}
-		node1 := &Node[string]{Key: "node1"}
-		node2 := &Node[string]{Key: "node2", prev: node1}
-		node3 := &Node[string]{Key: "node3", prev: node2}
-		list.Tail = node3
-		list.Head = node1
-		node1.next = node2
-		node2.next = node3
+		list.InsertAtHead(&Node[string]{Key: "node3"})
+		list.InsertAtHead(&Node[string]{Key: "node2"})
+		list.InsertAtHead(&Node[string]{Key: "node1"})
 
 		list.DeleteLastNode()
 		got := list.printList()

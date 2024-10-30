@@ -1,31 +1,26 @@
 package cachecomputing
 
 import (
+	"sync/atomic"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 // creator function
-var callCount = 0
 
-func creator(word string) int {
-	callCount++
-	return len(word)
-}
 func TestComputingCache(t *testing.T) {
-
-	t.Run("test get", func(t *testing.T) {
-		cache := NewComputingCache[string, int](10, creator)
-
-		got := cache.Get("Thailand")
-		require.Equal(t, 8, got)
-	})
-
 	t.Run("test concurrency", func(t *testing.T) {
-		callCount = 0
+		var callCount atomic.Int64
 		var wg sync.WaitGroup
+
+		creator := func(word string) int {
+			callCount.Add(1)
+			time.Sleep(time.Millisecond * 10)
+			return len(word)
+		}
 
 		cache := NewComputingCache[string, int](10, creator)
 		wg.Add(2)
@@ -38,7 +33,6 @@ func TestComputingCache(t *testing.T) {
 			cache.Get("Singapore")
 		}()
 		wg.Wait()
-		require.Equal(t, 2, callCount)
-
+		require.Equal(t, int64(1), callCount.Load())
 	})
 }

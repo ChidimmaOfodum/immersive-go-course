@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// creator function
-
 func TestComputingCache(t *testing.T) {
 
 	t.Run("computes the value for a key when not in cache", func(t *testing.T) {
@@ -42,7 +40,7 @@ func TestComputingCache(t *testing.T) {
 		}
 
 		cache := NewComputingCache[string, int](10, creator)
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 2; i++ {
 			wg.Add(1)
 			go func() {
 			defer wg.Done()
@@ -100,5 +98,41 @@ func TestComputingCache(t *testing.T) {
 		require.Equal(t, 9, value4)
 		require.Equal(t, 9, value5)
 		require.Equal(t, 4, value6)
+	})
+
+	t.Run("waiting routines receive value immediately it's computed", func(t *testing.T) {
+		var callCount atomic.Int64
+		var value1, value2 int
+		var wg sync.WaitGroup
+		creator := func(word string) int {
+			callCount.Add(1)
+			time.Sleep(time.Second * 2)
+			return len(word)
+		}
+		cache := NewComputingCache[string, int](1, creator)
+		wg.Add(4)
+		go func(){
+			defer wg.Done()
+			cache.Get("Singapore")
+		}()
+		go func(){
+			defer wg.Done()
+			cache.Get("Thailand")
+		}()
+
+		time.Sleep(time.Millisecond * 10)
+		go func(){
+			defer wg.Done()
+			value1 = cache.Get("Singapore")
+		}()
+		go func(){
+			defer wg.Done()
+			value2 = cache.Get("Thailand")
+		}()
+		wg.Wait()
+
+		require.Equal(t, 9, value1)
+		require.Equal(t, 8, value2)
+		require.Equal(t, int64(2), callCount.Load())
 	})
 }

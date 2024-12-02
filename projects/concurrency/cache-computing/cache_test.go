@@ -1,6 +1,7 @@
 package cachecomputing
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -101,6 +102,7 @@ func TestComputingCache(t *testing.T) {
 	})
 
 	t.Run("waiting routines receive value immediately it's computed", func(t *testing.T) {
+
 		var callCount atomic.Int64
 		var value1, value2 int
 		var wg sync.WaitGroup
@@ -134,5 +136,43 @@ func TestComputingCache(t *testing.T) {
 		require.Equal(t, 9, value1)
 		require.Equal(t, 8, value2)
 		require.Equal(t, int64(2), callCount.Load())
+	})
+
+	t.Run("one routine of a key does not block routines of different keys ", func(t *testing.T) {
+		var wg sync.WaitGroup
+		
+		creator := func(word string)int {
+			time.Sleep(time.Millisecond * 20)
+			return len(word)
+		}
+		cache := NewComputingCache[string, int](10, creator)
+		var startTime time.Time
+
+		wg.Add(1)
+		go func(){
+			defer wg.Done()
+			startTime = time.Now()
+			cache.Get("Singapore")
+		}()
+
+		for i :=0 ; i < 10000; i++ {
+			wg.Add(1)
+			go func(){
+				cache.Get("Singapore")
+				defer wg.Done()
+			}()
+		}
+		// fmt.Println(time.Since(startTime))
+
+		wg.Add(1)
+		go func(){
+			defer wg.Done()
+			defer func(){
+				fmt.Println(time.Since(startTime))
+			}()
+			cache.Get("Paris")
+		}()
+		wg.Wait()
+		
 	})
 }

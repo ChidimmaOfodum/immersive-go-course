@@ -7,17 +7,19 @@ import (
 
 type Creator[K comparable, V any] func(K) V
 type Pending_key[V any] struct {
+	pLock                   *sync.Mutex
 	numberOfWaitingRoutines int
 	channel                 chan V
-	pLock *sync.Mutex
 }
 
 type ComputingCache[K comparable, V any] struct {
-	cache       cache.Cache[K, V]
-	creator     Creator[K, V]
+	gLock sync.Mutex // this lock needs to held when checking if a key is present in the cache
+	cache cache.Cache[K, V]
+
+	creator Creator[K, V]
+
+	mu          sync.Mutex // this lock needs to be held when reading/writing to pendingKeys map
 	pendingKeys map[K]*Pending_key[V]
-	mu          sync.Mutex
-	gLock sync.Mutex
 }
 
 func NewComputingCache[K comparable, V any](entryLimit int, creator Creator[K, V]) *ComputingCache[K, V] {
@@ -34,7 +36,6 @@ func (c *ComputingCache[K, V]) Get(key K) V {
 		return *value
 	}
 
-	// c.mu.Lock()
 	c.gLock.Lock()
 	// recheck whether key is present
 	if value, present = c.cache.Get(key); present {
@@ -51,16 +52,15 @@ func (c *ComputingCache[K, V]) Get(key K) V {
 		return created
 	}
 	var pendingKeyLock sync.Mutex
-	c.pendingKeys[key] = &Pending_key[V]{0, make(chan V), &pendingKeyLock}
+	c.pendingKeys[key] = &Pending_key[V]{&pendingKeyLock, 0, make(chan V)}
 	c.mu.Unlock()
 
 	computedValue := c.creator(key)
 	c.cache.Put(key, computedValue)
 
 	// send value to all waiting routines
-	
+
 	c.mu.Lock()
-	//
 	pendingKey := c.pendingKeys[key]
 	delete(c.pendingKeys, key)
 	c.mu.Unlock()

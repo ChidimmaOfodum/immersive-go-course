@@ -13,12 +13,11 @@ type Pending_key[V any] struct {
 }
 
 type ComputingCache[K comparable, V any] struct {
-	gLock sync.Mutex // this lock needs to held when checking if a key is present in the cache
 	cache cache.Cache[K, V]
 
 	creator Creator[K, V]
 
-	mu          sync.Mutex // this lock needs to be held when reading/writing to pendingKeys map
+	mu          sync.Mutex
 	pendingKeys map[K]*Pending_key[V]
 }
 
@@ -36,15 +35,13 @@ func (c *ComputingCache[K, V]) Get(key K) V {
 		return *value
 	}
 
-	c.gLock.Lock()
+	c.mu.Lock()
 	// recheck whether key is present
 	if value, present = c.cache.Get(key); present {
-		c.gLock.Unlock()
+		c.mu.Unlock()
 		return *value
 	}
-	c.gLock.Unlock()
-
-	c.mu.Lock()
+	
 	if value, ok := c.pendingKeys[key]; ok {
 		value.numberOfWaitingRoutines++
 		c.mu.Unlock()

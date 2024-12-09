@@ -1,7 +1,6 @@
 package cachecomputing
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -140,9 +139,10 @@ func TestComputingCache(t *testing.T) {
 
 	t.Run("one routine of a key does not block routines of different keys ", func(t *testing.T) {
 		var wg sync.WaitGroup
+		creatorTime := time.Millisecond * 20
 		
 		creator := func(word string)int {
-			time.Sleep(time.Millisecond * 20)
+			time.Sleep(creatorTime)
 			return len(word)
 		}
 		cache := NewComputingCache[string, int](10, creator)
@@ -155,20 +155,11 @@ func TestComputingCache(t *testing.T) {
 			cache.Get("Singapore")
 		}()
 
-		for i :=0 ; i < 10000; i++ {
-			wg.Add(1)
-			go func(){
-				cache.Get("Singapore")
-				defer wg.Done()
-			}()
-		}
-		// fmt.Println(time.Since(startTime))
-
 		wg.Add(1)
 		go func(){
 			defer wg.Done()
 			defer func(){
-				fmt.Println(time.Since(startTime))
+				require.Less(t, time.Since(startTime), creatorTime + time.Millisecond * 10)
 			}()
 			cache.Get("Paris")
 		}()

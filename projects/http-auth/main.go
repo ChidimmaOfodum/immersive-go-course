@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"html"
-	"os"
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"os"
+	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -14,6 +15,8 @@ func main() {
 	if err != nil {
 		log.Fatal("error loading env file")
 	}
+
+	limiter := rate.NewLimiter(100, 30)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			params := r.URL.Query()
@@ -25,6 +28,7 @@ func main() {
 			w.Write([]byte(fmt.Sprintf("<!DOCTYPE html>\n<html>\n<em>Hello, world</em>\n<p>Query parameters: </p>\n<ul>%s</ul>", list)))
 		}
 	})
+
 	http.HandleFunc("/authenticated", func(w http.ResponseWriter, r *http.Request) {
 		user, password, ok := r.BasicAuth()
 		if !ok || (user != os.Getenv("AUTH_USERNAME") && password != os.Getenv("AUTH_PASSWORD")) {
@@ -42,8 +46,15 @@ func main() {
 	http.Handle("/404", http.NotFoundHandler())
 
 	http.HandleFunc("/500", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(500)
-		w.Write([]byte("Internal Server Error"))
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	http.HandleFunc("/limited", func(w http.ResponseWriter, r *http.Request) {
+		if limiter.Allow() {
+			w.WriteHeader(http.StatusAccepted)
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
 	})
 	http.ListenAndServe(":8080", nil)
 

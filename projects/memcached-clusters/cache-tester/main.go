@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/google/uuid"
 )
 
 
@@ -19,8 +20,9 @@ func main() {
 	flag.Parse()
 
 	mcPorts := strings.Split(*mcPort, ",")
+	numberOfPorts := len(mcPorts)
 
-	if len(mcPorts) <= 1 {
+	if numberOfPorts <= 1 {
 		fmt.Fprint(os.Stderr, "more than one cache is required\n")
 		flag.Usage()
 		os.Exit(1)
@@ -28,26 +30,35 @@ func main() {
 	routerServer := fmt.Sprintf("%s:%s", HOST, *mrPort)
 
 	routerClient := memcache.New(routerServer)
-	err := routerClient.Set(&memcache.Item{Key: "foo", Value: []byte("my value")})
+	key := uuid.NewString()
+	err := routerClient.Set(&memcache.Item{Key: key, Value: []byte("my value")})
 
 	if err != nil {
 		panic(err)
 	}
+	var absentCount int
 
 	for _, cache := range mcPorts {
 		cache = fmt.Sprintf("%s:%s", HOST, cache)
 		mc := memcache.New(cache)
-		_, err := mc.Get("foo")
+		_, err := mc.Get(key)
 
 		if err != nil {
 			if errors.Is(err, memcache.ErrCacheMiss) {
-				fmt.Println("Cache is sharded")
-				os.Exit(0)
+				absentCount++
 			} else {
 				panic(err)
 			}
 		}
 
 	}
-	fmt.Println("Cache is replicated")
+
+	switch absentCount {
+	case numberOfPorts - 1:
+		fmt.Println("Cache is sharded")
+	case 0:
+		fmt.Println("Cache is replicated")
+	default:
+		fmt.Print("Cannot determine if cache is sharded or replicated")
+	}
 }
